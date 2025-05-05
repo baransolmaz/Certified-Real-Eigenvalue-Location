@@ -1,5 +1,5 @@
 using Plots
-gr()  # GR backend ile çalış, otomatik pencere açılır
+gr()
 
 
 function gershgorin_disks(A::AbstractMatrix{<:Number})
@@ -11,13 +11,14 @@ function gershgorin_disks(A::AbstractMatrix{<:Number})
     disks = []
     for i in 1:n
         center = A[i, i]
-        radius = sum(abs(A[i, j]) for j in 1:n if j != i)
-        push!(disks, (center=center, radius=radius))
+        radius1 = sum(abs(A[i, j]) for j in 1:n if j != i)
+        radius2 = sum(abs(A[k, i]) for k in 1:n if k != i)
+        push!(disks, (center=center, radius=min(radius1,radius2))) # minimumu al
     end
     return disks
 end
 
-function ciz_gershgorin_disks(disks)
+function draw_gershgorin_disks(disks)
     plt = plot(aspect_ratio=1, legend=false, title="Gershgorin Diskleri")
 
     for d in disks
@@ -30,21 +31,39 @@ function ciz_gershgorin_disks(disks)
         scatter!([real(c)], [imag(c)], color=:red, markersize=4)
     end
 
-    savefig(plt, "gershgorin.png")
-    println("Görsel kaydedildi: gershgorin.png")
+    savefig(plt, "disk_images/gershgorin.png")
+    println("Görsel kaydedildi: disk_images/gershgorin.png")
 end
 
 # Main fonksiyonu
 function main()
-    A = [4.0 2.0 0.0;
-        1.0 3.0 3.0;
-        0.0 1.0 2.0]
+    A = [1.0 2.0 3.0;
+        1.0 2.0 3.0;
+        1.0 1.0 3.0]
 
     disks = gershgorin_disks(A)
     for d in disks
         println("Center: $(d.center) | Radius: $(d.radius)")
     end
-    ciz_gershgorin_disks(disks)
+    draw_gershgorin_disks(disks)
+
+
+
+
+
+
 end
 
+
+
+
+
+
+
+
+
+
+
+
+#Runner
 main()
