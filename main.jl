@@ -1,12 +1,9 @@
 using Plots
+using LinearAlgebra
 gr()
-
 
 function gershgorin_disks(A::AbstractMatrix{<:Number})
     n, m = size(A)
-    if n != m
-        error("Matris kare değil!")
-    end
 
     disks = []
     for i in 1:n
@@ -35,20 +32,48 @@ function draw_gershgorin_disks(disks)
     println("Görsel kaydedildi: disk_images/gershgorin.png")
 end
 
+function eigenvalue_norm_based_bounds(A::AbstractMatrix)
+    # Norm-based bounds
+    bounds = Dict{String,Float64}()
+    bounds["Spectral norm (2-norm)"] = opnorm(A, 2)
+    bounds["Frobenius norm"] = norm(vec(A))
+    bounds["1-norm (max column sum)"] = opnorm(A, 1)
+    bounds["∞-norm (max row sum)"] = opnorm(A, Inf)
+
+    return bounds
+end
+
+function check_matrix_requirements(A::AbstractMatrix{<:Number})
+    n,m =size(A)
+    if n != m
+        return false
+    end
+    return true
+end
+
 # Main fonksiyonu
 function main()
     A = [1.0 2.0 3.0;
         1.0 2.0 3.0;
         1.0 1.0 3.0]
 
-    disks = gershgorin_disks(A)
-    for d in disks
-        println("Center: $(d.center) | Radius: $(d.radius)")
+    if check_matrix_requirements(A)
+        disks = gershgorin_disks(A)
+        for d in disks
+            println("Center: $(d.center) | Radius: $(d.radius)")
+        end
+        draw_gershgorin_disks(disks)
+
+        bounds = eigenvalue_norm_based_bounds(A)
+
+        for (key, value) in bounds
+            println(rpad(key, 40), ": ", round(value, digits=4))
+        end
+    else
+        println("---------- Matris Uygun Değil! ----------")
     end
-    draw_gershgorin_disks(disks)
 
-
-
+    
 
 
 
