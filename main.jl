@@ -41,6 +41,9 @@ function main()
         0.0 1.0 2.0]
 
     disks = gershgorin_disks(A)
+    for d in disks
+        println("Center: $(d.center) | Radius: $(d.radius)")
+    end
     ciz_gershgorin_disks(disks)
 end
 
