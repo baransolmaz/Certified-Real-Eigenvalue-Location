@@ -28,8 +28,8 @@ function draw_gershgorin_disks(disks)
         scatter!([real(c)], [imag(c)], color=:red, markersize=4)
     end
 
-    savefig(plt, "disk_images/gershgorin.png")
-    println("Görsel kaydedildi: disk_images/gershgorin.png")
+    savefig(plt, "images/gershgorin.png")
+    println("Görsel kaydedildi: images/gershgorin.png")
 end
 
 function eigenvalue_norm_based_bounds(A::AbstractMatrix)
