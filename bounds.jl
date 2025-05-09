@@ -113,8 +113,8 @@ function all_eigenvalue_bounds(A::AbstractMatrix)
     for k in 1:n
         if k == 1
             # Bounds for largest eigenvalue (λ₁)
-            lower = m + s / sqrt(n - 1)
-            upper = m + s * sqrt(n - 1)
+            lower = m + s / sqrt(n - 1) # min_bound
+            upper = m + s * sqrt(n - 1) # max_bound
         elseif k == n
             # Bounds for smallest eigenvalue (λₙ)
             lower = m - s * sqrt(n - 1)
