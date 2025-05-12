@@ -74,11 +74,48 @@ function companion_matrix(coeffs::Vector{T}) where {T<:Number}
     # Fill last column with negated coefficients
     for i in 1:n
         C[i, n] = -normalized_coeffs[n+2-i]
-
     end
 
     return C
 end
+
+function signature(M::Matrix{<:Number})
+    # Ensure the matrix is symmetric
+    @assert M == transpose(M) "Matrix must be symmetric."
+
+    # Compute characteristic polynomial coefficients (descending order: x^k to x^0)
+    coeff = charpoly(M)
+
+    # Function to count sign variations, ignoring zeros
+    function count_sign_variations(c)
+        filtered = filter(!iszero, c)
+        isempty(filtered) && return 0
+        count = 0
+        for i in 1:length(filtered)-1
+            if sign(filtered[i]) != sign(filtered[i+1])
+                count += 1
+            end
+        end
+        return count
+    end
+
+    # Sign variations for p(x)
+    v1 = count_sign_variations(coeff)
+
+    # Coefficients for p(-x)
+    n = length(coeff)
+    coeff_neg = [coeff[i] * (-1)^(n - i) for i in 1:n]
+
+    # Sign variations for p(-x)
+    v2 = count_sign_variations(coeff_neg)
+
+    # Signature: difference in sign variations
+    σ = v1 - v2
+
+    return σ
+end
+
+
 
 coeffs = [16.0, 0.0, -10.0 , 0.0, 1]
 power_sums = newton_girard_power_sums(coeffs)

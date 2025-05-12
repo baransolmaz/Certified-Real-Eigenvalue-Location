@@ -4,7 +4,6 @@ gr()
 
 function gershgorin_disks(A::AbstractMatrix{<:Number})
     n, m = size(A)
-
     disks = []
     for i in 1:n
         center = A[i, i]
@@ -13,6 +12,10 @@ function gershgorin_disks(A::AbstractMatrix{<:Number})
         push!(disks, (center=center, radius=min(radius1,radius2))) # minimumu al
     end
     return disks
+end
+
+function in_gershgorin_disk(x::Number, center::Number, radius::Real)
+    return abs(complex(x) - complex(center)) <= radius
 end
 
 function draw_gershgorin_disks(disks)
@@ -54,21 +57,31 @@ end
 # Main fonksiyonu
 function main()
     A = [1.0 2.0 3.0;
-        1.0 2.0 3.0;
+        1.0 5.0 3.0;
         1.0 1.0 3.0]
 
     if check_matrix_requirements(A)
         disks = gershgorin_disks(A)
         for d in disks
             println("Center: $(d.center) | Radius: $(d.radius)")
+            gx = in_gershgorin_disk(1.2, d.center, d.radius)
+            println(gx)
         end
-        draw_gershgorin_disks(disks)
+        #draw_gershgorin_disks(disks)
 
         bounds = eigenvalue_norm_based_bounds(A)
 
         for (key, value) in bounds
             println(rpad(key, 40), ": ", round(value, digits=4))
         end
+
+
+
+
+
+
+
+
     else
         println("---------- Matris Uygun Değil! ----------")
     end
