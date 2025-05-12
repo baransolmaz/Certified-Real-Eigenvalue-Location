@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Polynomials
 function newton_girard_power_sums(coeffs; max_k::Int=(length(coeffs)*2) - 1)
     # Check leading coefficient and convert coefficients to fractions
     a₀ = coeffs[1]
@@ -43,7 +44,7 @@ function setHermite_1(degree, power_sums)
 end
 
 function g(M)
-    return (M-(5*I))*(M-(2*I))
+    return (M - (1 / 10) * I) * (M + (1 / 10) * I)
 end
 
 function getMx(h1,k)
@@ -54,18 +55,44 @@ function getHg(h1, mx)
     return h1 * g(mx)
 end
 
+
+function companion_matrix(coeffs::Vector{T}) where {T<:Number}
+    n = length(coeffs) - 1  # degree of polynomial
+    n < 1 && throw(ArgumentError("Polynomial must have degree at least 1"))
+
+    # Normalize to monic form (leading coefficient = 1)
+    normalized_coeffs = coeffs ./ coeffs[1]
+
+    # Create companion matrix
+    C = zeros(Rational, n, n)
+
+    # Fill subdiagonal with 1s
+    for i in 2:n
+        C[i, i-1] = one(T)
+    end
+
+    # Fill last column with negated coefficients
+    for i in 1:n
+        C[i, n] = -normalized_coeffs[n+2-i]
+
+    end
+
+    return C
+end
+
 coeffs = [16.0, 0.0, -10.0 , 0.0, 1]
 power_sums = newton_girard_power_sums(coeffs)
 println("Power Sums: ", power_sums)
 
-h_1 = setHermite_1(length(coeffs), power_sums)
+h_1 = setHermite_1(length(coeffs)-1, power_sums)
 display(h_1)
 
 h_1_bigfloat = AbstractMatrix{Float64}(h_1)
 rank_h1 = rank(h_1_bigfloat)
 println("Rank of h_1: ", rank_h1)
 
-m_x = getMx(h_1, rank_h1)
+#m_x = getMx(h_1, rank_h1)
+m_x = companion_matrix(coeffs)
 display(m_x)
 hg = getHg(h_1,m_x)
 display(hg)
