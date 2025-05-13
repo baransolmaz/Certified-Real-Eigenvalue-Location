@@ -18,6 +18,10 @@ function in_gershgorin_disk(x::Number, center::Number, radius::Real)
     return abs(complex(x) - complex(center)) <= radius
 end
 
+function g(center,radius , x , y)
+    return (x-center)^2 +(y^2) - (radius^2) 
+end
+
 function draw_gershgorin_disks(disks)
     plt = plot(aspect_ratio=1, legend=false, title="Gershgorin Diskleri")
 
