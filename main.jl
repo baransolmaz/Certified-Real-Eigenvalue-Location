@@ -80,8 +80,6 @@ function main()
 
 
 
-
-
     else
         println("---------- Matris Uygun Değil! ----------")
     end

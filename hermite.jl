@@ -1,5 +1,7 @@
 using LinearAlgebra
 using Polynomials
+using AbstractAlgebra
+
 function newton_girard_power_sums(coeffs; max_k::Int=(length(coeffs)*2) - 1)
     # Check leading coefficient and convert coefficients to fractions
     a₀ = coeffs[1]
@@ -42,9 +44,10 @@ function setHermite_1(degree, power_sums)
 
     return mat
 end
-
 function g(M)
-    return (M - (1 / 10) * I) * (M + (1 / 10) * I)
+    Mr = Rational.(M)  # Convert all entries to Rational
+    Ir = Matrix{Rational}(I, size(M, 1), size(M, 2))  # Rational identity matrix
+    return (Mr - (1 // 10) * Ir) * (Mr + (1 // 10) * Ir)
 end
 
 function getMx(h1,k)
@@ -79,12 +82,34 @@ function companion_matrix(coeffs::Vector{T}) where {T<:Number}
     return C
 end
 
+function charpoly_faddeev_leverrier(A::Matrix{<:Rational})
+    n = size(A, 1)
+    T = eltype(A)
+    M = Matrix{T}(I, n, n)  # Initialize with identity matrix
+    c = Vector{T}(undef, n) # Coefficients [c_{n-1}, c_{n-2}, ..., c₀]
+
+    for k in 1:n
+        AM = A * M           # Matrix multiplication
+        trace_AM = tr(AM)    # Trace of the product
+        c_k = -trace_AM // k # Compute coefficient
+        c[k] = c_k
+
+        if k < n
+            M = AM + c_k * I  # Update matrix for next iteration
+        end
+    end
+
+    # Return monic polynomial coefficients: [1, c_{n-1}, ..., c₀]
+    return vcat(one(T), c)
+end
+
 function signature(M::Matrix{<:Number})
     # Ensure the matrix is symmetric
     @assert M == transpose(M) "Matrix must be symmetric."
 
     # Compute characteristic polynomial coefficients (descending order: x^k to x^0)
-    coeff = charpoly(M)
+    coeff = charpoly_faddeev_leverrier(M)
+    display(coeff)
 
     # Function to count sign variations, ignoring zeros
     function count_sign_variations(c)
@@ -134,4 +159,7 @@ display(m_x)
 hg = getHg(h_1,m_x)
 display(hg)
 
-
+sig = signature(hg)
+display(sig)
+sig1 = signature(h_1)
+display(sig1)
