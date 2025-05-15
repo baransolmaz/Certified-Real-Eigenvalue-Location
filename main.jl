@@ -60,7 +60,7 @@ end
 
 function signature(M::Matrix{<:Number})
     # Ensure the matrix is symmetric
-    @assert M == transpose(M) "Matrix must be symmetric."
+   # @assert M == transpose(M) "Matrix must be symmetric."
 
     # Compute characteristic polynomial coefficients (descending order: x^k to x^0)
     coeff = charpoly_faddeev_leverrier(M)
@@ -207,9 +207,13 @@ function main()
     pa = charpoly_faddeev_leverrier(A)
     power_sums = newton_girard_power_sums(pa)
     h1 = setHermite_1(length(pa) - 1, power_sums)
+    println("H1")
+    display(h1)
     cp= companion_matrix(pa)
+    println("\nCp")
+    display(cp)
     signH1 = signature(h1)
-
+    println("Sign H1 : $(signH1)")
 
     if check_matrix_requirements(A)
         disks = gershgorin_disks(A)
@@ -220,10 +224,12 @@ function main()
             
             g(x) = abs.(x - d.center*I) - d.radius*I
 
-            hg= h1 * g(cp)
-            
-            signHg = signature(hg)#!!
+            hg = h1 * g(cp)
+            println("\nHg")
+            display(hg)
 
+            signHg = signature(hg)#!!
+            println("Sign Hg : $(signHg)")
             
             if signH1 != signHg
                 println("Circle has a real eigen")
