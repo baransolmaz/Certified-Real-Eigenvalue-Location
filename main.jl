@@ -32,7 +32,12 @@ function draw_gershgorin_disks(disks)
         x = real(c) .+ r .* cos.(θ)
         y = imag(c) .+ r .* sin.(θ)
         plot!(x, y, label="", fill=(0.2, :blue), linecolor=:blue)
-        scatter!([real(c)], [imag(c)], color=:red, markersize=4)
+        if r == 0
+            scatter!([real(c)], [imag(c)], color=:black, markersize=4)
+        else
+            # Draw the center of the disk
+            scatter!([real(c)], [imag(c)], color=:black, markersize=4)
+        end
     end
 
     savefig(plt, "images/gershgorin.png")
@@ -64,7 +69,6 @@ function signature(M::Matrix{<:Number})
 
     # Compute characteristic polynomial coefficients (descending order: x^k to x^0)
     coeff = charpoly_faddeev_leverrier(M)
-    display(coeff)
 
     # Function to count sign variations, ignoring zeros
     function count_sign_variations(c)
@@ -199,12 +203,14 @@ end
 # Main fonksiyonu
 function main()
     A = Matrix{Rational{Int}}(
-            [1.0 2.0 3.0;
-            1.0 5.0 3.0;
-            1.0 1.0 3.0]
+            [0 -1 0 ;
+            1 0 0;
+            0 0 1]
     )
 
     pa = charpoly_faddeev_leverrier(A)
+    println("Pa")
+    display(pa)
     power_sums = newton_girard_power_sums(pa)
     h1 = setHermite_1(length(pa) - 1, power_sums)
     println("H1")
@@ -222,25 +228,30 @@ function main()
             #gx = in_gershgorin_disk(1.2, d.center, d.radius)
             #println(gx)
             
-            g(x) = abs.(x - d.center*I) - d.radius*I
-
-            hg = h1 * g(cp)
-            println("\nHg")
-            display(hg)
-
-            signHg = signature(hg)#!!
-            println("Sign Hg : $(signHg)")
-            
-            if signH1 != signHg
-                println("Circle has a real eigen")
+            if d.radius == 0
+                println("EigenValue at $(d.center)") 
             else
-                println("Circle has not a real eigen")
+                g(x) = (d.radius * I)^2 - (x - d.center * I)^2
+        
+                hg = h1 * g(cp)
+                println("\nHg")
+                display(hg)
+    
+                signHg = signature(hg)#!!
+                println("Sign Hg : $(signHg)")
+                
+                if signH1 != signHg
+                    println("Circle contains at least one real eigen")
+                else
+    
+                    println("Circle does not contain any real eigen")
+                end
+    
+    
+    
             end
-
-
-
         end
-        #draw_gershgorin_disks(disks)
+        draw_gershgorin_disks(disks)
 
         #bounds = eigenvalue_norm_based_bounds(A)
 
