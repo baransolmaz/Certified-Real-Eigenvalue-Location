@@ -104,31 +104,74 @@ function mean_m(A::AbstractMatrix)
     return tr(A) / n
 end
 
-function all_eigenvalue_bounds(A::AbstractMatrix)
-    n = size(A, 1)
-    m = mean_m(A)
-    s = compute_s(A)
-    bounds = Vector{NamedTuple}(undef, n)
+struct EigenBounds
+    real::Vector{Tuple{Float64, Float64}}
+    imag::Vector{Tuple{Float64, Float64}}
+    modulus::Vector{Tuple{Float64, Float64}}
+end
 
-    for k in 1:n
-        if k == 1
-            #1.10 2.3
-            # Bounds for largest eigenvalue (λ₁)
-            lower = m + s / sqrt(n - 1) # min_bound
-            upper = m + s * sqrt(n - 1) # max_bound
-        elseif k == n #2.2
-            # Bounds for smallest eigenvalue (λₙ)
-            lower = m - s * sqrt(n - 1)
-            upper = m - s / sqrt(n - 1)
-        else
-            # Bounds for intermediate eigenvalues (Theorem 2.2)
-            lower = m - s * sqrt((k - 1) / (n - k + 1))
-            upper = m + s * sqrt((n - k) / k)
-        end
-        bounds[k] = (lambda="lambda_$k", lower=lower, upper=upper)
+function eigen_bounds(A::AbstractMatrix{T}) where {T<:Number}
+    n = checksquare(A)
+    B = (A + A')/2
+    C = (A - A')/(2im)
+    
+    # Real part bounds
+    trB = real(tr(B))
+    trB² = real(tr(B^2))
+    m_b = trB / n
+    s_b = sqrt((trB² - trB^2/n)/n)
+    
+    # Imaginary part bounds
+    trC = real(tr(C))
+    trC² = real(tr(C^2))
+    m_c = trC / n
+    s_c = sqrt((trC² - trC^2/n)/n)
+    
+    # Modulus bounds
+    trAA = real(tr(A'*A))
+    m_a = abs(tr(A)/n)
+    s_a = sqrt((trAA/n) - m_a^2)
+    
+    # Precompute coefficients
+    k_vals = 1:n
+    sqrt_terms_real = [sqrt((k-1)/(n-k+1)) for k in k_vals]
+    sqrt_terms_imag = [sqrt((n-k)/k) for k in k_vals]
+    
+    # Generate bounds
+    real_bounds = [(m_b - s_b*sqrt_terms_real[k], m_b + s_b*sqrt_terms_imag[k]) for k in k_vals]
+    imag_bounds = [(m_c - s_c*sqrt_terms_real[k], m_c + s_c*sqrt_terms_imag[k]) for k in k_vals]
+    mod_bounds = [(max(m_a - s_a*sqrt(n-1), 0), sqrt(trAA/n) + s_a*sqrt((n-1)/n)) for _ in k_vals]
+    
+    # Sort bounds descendingly
+    sort!(real_bounds, rev=true)
+    sort!(imag_bounds, rev=true)
+    sort!(mod_bounds, rev=true)
+    
+    EigenBounds(real_bounds, imag_bounds, mod_bounds)
+end
+
+# Helper functions
+function checksquare(A)
+    m, n = size(A)
+    m == n || throw(DimensionMismatch("Matrix must be square"))
+    n
+end
+
+function print_bounds(b::EigenBounds)
+    println("Real Part Bounds:")
+    for (i, (lo, hi)) in enumerate(b.real)
+        @printf("λ_%d ∈ (%6.3f, %6.3f)\n", i, lo, hi)
     end
-
-    return bounds
+    
+    println("\nImaginary Part Bounds:")
+    for (i, (lo, hi)) in enumerate(b.imag)
+        @printf("λ_%d ∈ (%6.3f, %6.3f)\n", i, lo, hi)
+    end
+    
+    println("\nModulus Bounds:")
+    for (i, (lo, hi)) in enumerate(b.modulus)
+        @printf("|λ_%d| ∈ (%6.3f, %6.3f)\n", i, lo, hi)
+    end
 end
 
 
@@ -149,6 +192,22 @@ function draw_intervals(V::Vector{NamedTuple})
     savefig(plt, "images/bounds.png")
     println("Görsel kaydedildi: images/bounds.png")
 end
+function print_bounds(b::EigenBounds)
+    println("Real Part Bounds:")
+    for (i, (lo, hi)) in enumerate(b.real)
+        @printf("λ_%d ∈ (%6.3f, %6.3f)\n", i, lo, hi)
+    end
+
+    println("\nImaginary Part Bounds:")
+    for (i, (lo, hi)) in enumerate(b.imag)
+        @printf("λ_%d ∈ (%6.3f, %6.3f)\n", i, lo, hi)
+    end
+
+    println("\nModulus Bounds:")
+    for (i, (lo, hi)) in enumerate(b.modulus)
+        @printf("|λ_%d| ∈ (%6.3f, %6.3f)\n", i, lo, hi)
+    end
+end
 
 function main()
     A = [1.0 3.0 5.0 9.0;
@@ -160,16 +219,21 @@ function main()
         1.0 0.0 0.0;
         0.0 0.0 1.0]
 
-    all_bounds = all_eigenvalue_bounds(B)
-    disks = gershgorin_disks(B)
+    C = [1.0 -1.0;
+        1.0 1.0 ]
 
-    println(B)
+
+    bounds = eigen_bounds(B)
+    print_bounds(bounds)
+
+    #==println(C)
     for b in all_bounds
-        @printf("%s ∈ (%5.3f, %5.3f)\n", b.lambda, b.lower, b.upper)
+        display(b)
     end
+    ==#
 
-    draw_intervals(all_bounds)
-    draw_gershgorin_disks_and_bounds(disks,all_bounds)
+    #draw_intervals(all_bounds)
+    #draw_gershgorin_disks_and_bounds(disks,all_bounds)
 
 end
 
