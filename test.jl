@@ -48,8 +48,8 @@ function gershgorin_disks(A::AbstractMatrix{<:Number})
     for i in 1:n
         center = A[i, i]
         radius1 = sum(j -> j == i ? 0.0 : abs(A[i, j]), 1:n)  # Row sum
-        radius2 = sum(k -> k == i ? 0.0 : abs(A[k, i]), 1:n)  # Column sum
-        push!(disks, (center=center, radius=min(radius1, radius2)))
+        #radius2 = sum(k -> k == i ? 0.0 : abs(A[k, i]), 1:n)  # Column sum
+        push!(disks, (center=center, radius=radius1))
     end
     return disks
 end
@@ -290,13 +290,33 @@ function test()
         0.0 0.0 0.0 4.0 0.0;
         0.0 0.0 0.0 0.0 0.01
     ]
+    B=[1.0 2.0 3.0 4.0 5.0;
+        5.0 1.0 2.0 3.0 4.0;
+        4.0 5.0 1.0 2.0 3.0;
+        3.0 4.0 5.0 1.0 2.0;
+        2.0 3.0 4.0 5.0 1.0]
+
+    B1 = [5.0 2.0 0.0;
+        2.0 5.0 0.0 ;
+        -3.0 4.0 6.0]
     matrices = [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]
 
-    for (i, A) in enumerate(matrices)
+    B2 = [2.0 -1.0;
+        2.0 0.0]
+
+    B3 = [1.25 1.0 0.75 0.5 0.25;
+        1 0.0 0.0 0.0 0.0;
+        -1.0 1.0 0.0 0.0 0.0;
+        0.0 0.0 1.0 3.0 0.0
+        0.0 0.0 0.0 0.5 5.0]
+
+    matches = match_disks_to_eigenvalues(B3)  # Convert to Float64 matrix
+    drawBounds("B3", matches)
+    #=for (i, A) in enumerate(matrices)
         println("\nMatrix A$i results:")
         matches = match_disks_to_eigenvalues(A)  # Convert to Float64 matrix
         drawBounds("A$i",matches)
-    end
+    end=#
 end
 #main()
 test()

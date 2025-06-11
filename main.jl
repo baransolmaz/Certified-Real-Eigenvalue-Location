@@ -9,7 +9,7 @@ function gershgorin_disks(A::AbstractMatrix{<:Number})
         center = A[i, i]
         radius1 = sum(abs(A[i, j]) for j in 1:n if j != i)
         radius2 = sum(abs(A[k, i]) for k in 1:n if k != i)
-        push!(disks, (center=center, radius=min(radius1,radius2))) # minimumu al
+        push!(disks, (center=center, radius=radius1)) # minimumu al
     end
     return disks
 end
@@ -207,8 +207,13 @@ function main()
             1 0 0;
             0 0 1]
     )
+    B3 = Matrix{Rational{Int}}( [5/4 1 3/4 1/2 1/4;
+        1 0 0 0 0 ;
+        -1 1 0 0 0;
+        0 0 1 3 0;
+       0 0 0 1/2 5])
 
-    pa = charpoly_faddeev_leverrier(A)
+    pa = charpoly_faddeev_leverrier(B3)
     println("Pa")
     display(pa)
     power_sums = newton_girard_power_sums(pa)
@@ -221,8 +226,8 @@ function main()
     signH1 = signature(h1)
     println("Sign H1 : $(signH1)")
 
-    if check_matrix_requirements(A)
-        disks = gershgorin_disks(A)
+    if check_matrix_requirements(B3)
+        disks = gershgorin_disks(B3)
         for d in disks
             println("Center: $(d.center) | Radius: $(d.radius)")
             #gx = in_gershgorin_disk(1.2, d.center, d.radius)
@@ -231,7 +236,7 @@ function main()
             if d.radius == 0
                 println("EigenValue at $(d.center)") 
             else
-                g(x) = (d.radius * I)^2 - (x - d.center * I)^2
+                g(x) = (x - d.center * I)^2 - (d.radius * I)^2
         
                 hg = h1 * g(cp)
                 println("\nHg")
