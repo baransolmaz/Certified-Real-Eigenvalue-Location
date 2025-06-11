@@ -187,7 +187,7 @@ end
 Plot Gershgorin disks with scanning lines.
 """
 function plot_scanned_disks(disks; title="Scanned Disks", filepath=nothing)
-    plt = plot(aspect_ratio=1, title=title, legend=false)
+    plt = plot(aspect_ratio=1, title=title,xlabel="Re", ylabel="Im", legend=false)
 
     for d in disks
         c = d.center
