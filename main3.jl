@@ -170,11 +170,11 @@ function plot_gershgorin_disks(disks; title="Gershgorin Disks", filled=false, fi
         y = imag(c) .+ r .* sin.(θ)
         
         if filled && get(d, :fill, false)
-            plot!(x, y, fill=(0.2, :blue), linecolor=:blue)
+            plot!(x, y, fill=(0.2, :brown), linecolor=:brown)
         else
-            plot!(x, y, linecolor=:blue)
+            plot!(x, y, linecolor=:brown)
         end
-        scatter!([real(c)], [imag(c)], color=:red, markersize=4)
+        scatter!([real(c)], [imag(c)], color=:red, markersize=3)
     end
     
     filepath !== nothing && savefig(plt, filepath)
@@ -188,7 +188,7 @@ Plot Gershgorin disks with scanning lines.
 """
 function plot_scanned_disks(disks; title="Scanned Disks", filepath=nothing)
     plt = plot(aspect_ratio=1, title=title, legend=false)
-    
+
     for d in disks
         c = d.center
         r = d.radius
@@ -197,34 +197,39 @@ function plot_scanned_disks(disks; title="Scanned Disks", filepath=nothing)
         θ = range(0, 2π, length=200)
         x = cx .+ r .* cos.(θ)
         y = cy .+ r .* sin.(θ)
-        plot!(x, y, linecolor=:blue)
-        scatter!([cx], [cy], color=:red, markersize=4)
+        plot!(x, y, linecolor=:brown)
+        scatter!([cx], [cy], color=:red, markersize=3)
 
         if r > 0
             n_lines = 20
-            a = cx - r
-            b = cx + r
-            x_vals = range(a, b, length=n_lines)
+            t_vals = range(-r, r, length=n_lines)
+            angle = get(d, :fill, false) ? π / 4 : 3π / 4  # 45° or 135°
             line_color = get(d, :fill, false) ? :green : :red
-            
-            if !get(d, :fill, false)
-                x_vals = reverse(x_vals)
-            end
 
-            for x_val in x_vals
-                dx = x_val - cx
-                offset = sqrt(r^2 - dx^2)
-                y1 = cy - offset
-                y2 = cy + offset
-                plot!([x_val, x_val], [y1, y2], 
-                      color=line_color, linewidth=1.5, alpha=0.6)
+            cos_a = cos(angle)
+            sin_a = sin(angle)
+
+            for t in t_vals
+                # Parametric line centered at (cx, cy)
+                dx = cos_a * t
+                dy = sin_a * t
+
+                # Extend line segment symmetrically within the circle
+                length_max = sqrt(r^2 - t^2)
+                x1 = cx + dx - length_max * sin_a
+                y1 = cy + dy + length_max * cos_a
+                x2 = cx + dx + length_max * sin_a
+                y2 = cy + dy - length_max * cos_a
+
+                plot!([x1, x2], [y1, y2], color=line_color, linewidth=1.5, alpha=0.6)
             end
         end
     end
-    
+
     filepath !== nothing && savefig(plt, filepath)
     return plt
 end
+
 
 """
     plot_intervals(intervals, plt; title="Eigenvalue Intervals")
@@ -235,59 +240,36 @@ function plot_intervals(intervals, plt; title="Eigenvalue Intervals", filepath=n
     # Get current plot boundaries
     ymin, ymax = ylims()
     xmin, xmax = xlims()
-    plot_height = ymax - ymin
 
     for interval in intervals
         a = interval.startP
         b = interval.endP
 
         # Draw vertical boundary lines for all intervals
-        vline!(plt,[a], line=(:solid, 2, :black), alpha=0.8)
-        vline!([b], line=(:solid, 2, :black), alpha=0.8)
+        vline!(plt, [a], line=(:solid, 1, :black), alpha=0.8)
+        vline!(plt, [b], line=(:solid, 1, :black), alpha=0.8)
+        
 
-        # Add diagonal scans for eigenvalue-containing intervals
+        # Draw semi-transparent rectangle if eigenvalue is known to exist
         if interval.isExist
-            width = b - a
+            plot!(plt, [a, b], [0, 0], line=(:solid, 2, :black))
 
-            # Calculate adaptive line density (more lines for narrower intervals)
-            base_density = 40
-            min_density = 30
-            max_density = 150
-            density_factor = min(max_density, max(min_density, base_density * ((xmax - xmin) / width)))
-            n_lines = round(Int, density_factor)
-
-            # Calculate step size for diagonal lines
-            step = width / n_lines
-
-            # Draw dotted diagonal lines at 45 degrees
-            for i in 0:n_lines
-                x_start = a + i * step
-
-                # Line starting from bottom boundary
-                y_end = min(ymax, ymin + (b - x_start))
-                x_end = x_start + (y_end - ymin)
-                plot!([x_start, x_end], [ymin, y_end],
-                    line=(:dot, 1.2, :brown),
-                    alpha=0.7, label="")
-
-                # Line starting from left boundary (for tall plots)
-                if i > 0
-                    y_start = ymin + i * step
-                    if y_start < ymax
-                        x_end2 = min(b, a + (ymax - y_start))
-                        y_end2 = y_start + (x_end2 - a)
-                        plot!([a, x_end2], [y_start, y_end2],
-                            line=(:dot, 1.2, :brown),
-                            alpha=0.7, label="")
-                    end
-                end
-            end
+            plot!(
+                [a, b, b, a, a],                 # x-coordinates of the rectangle
+                [ymin, ymin, ymax, ymax, ymin],  # y-coordinates
+                fill=(0, :blue),
+                alpha=0.25,
+                line=:transparent,
+                label=""
+            )
         end
     end
 
+    title!(plt, title)
     filepath !== nothing && savefig(plt, filepath)
     return plt
 end
+
 
 # Main analysis functions ----------------------------------------------------
 """
