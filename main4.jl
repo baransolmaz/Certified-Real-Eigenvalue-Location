@@ -326,7 +326,6 @@ function analyze_intervals(points, h1, signH1, cp)
         g(x) = (x - a * I) * (x - b * I)
         hg = h1 * g(cp)
         signHg = signature(hg)
-        display(signHg)
         
         contains_eigen = (signH1 != signHg)
         push!(intervals, (startP=a, endP=b, isExist=contains_eigen))
@@ -335,6 +334,43 @@ function analyze_intervals(points, h1, signH1, cp)
     end
     
     return intervals
+end
+
+function compute_s(A::AbstractMatrix)
+    n, m = size(A)
+    return sqrt(((tr(A * A) - ((tr(A)^2)) / n) / n))
+end
+
+function mean_m(A::AbstractMatrix)
+    n, m = size(A)
+    return tr(A) / n
+end
+
+function all_eigenvalue_bounds(A::AbstractMatrix)
+    n = size(A, 1)
+    m = mean_m(A)
+    s = compute_s(A)
+    bounds = Vector{NamedTuple}(undef, n)
+
+    for k in 1:n
+        if k == 1
+            #1.10 2.3
+            # Bounds for largest eigenvalue (λ₁)
+            lower = m + s / sqrt(n - 1) # min_bound
+            upper = m + s * sqrt(n - 1) # max_bound
+        elseif k == n #2.2
+            # Bounds for smallest eigenvalue (λₙ)
+            lower = m - s * sqrt(n - 1)
+            upper = m - s / sqrt(n - 1)
+        else
+            # Bounds for intermediate eigenvalues (Theorem 2.2)
+            lower = m - s * sqrt((k - 1) / (n - k + 1))
+            upper = m + s * sqrt((n - k) / k)
+        end
+        bounds[k] = (lambda="lambda_$k", lower=lower, upper=upper)
+    end
+
+    return bounds
 end
 
 # Main application -----------------------------------------------------------
@@ -347,9 +383,15 @@ function main()
         0     0     1     3     0;
         0     0     0     1//2  5
     ])
-    
+     B = Matrix{Rational{Int}}([
+       2 0 0 0 0;
+       0 2 0 0 0;
+       0 0 5 7 1;
+       0 0 3 1 5;
+       0 0 4 2 -2
+    ])
 
-    inputMatrix = M
+    inputMatrix = B
     # Characteristic polynomial and power sums
     pa = charpoly_faddeev_leverrier(inputMatrix)
     display(pa)
@@ -368,17 +410,81 @@ function main()
     
     # Gershgorin analysis
     disks = gershgorin_disks(inputMatrix)
-    plot_gershgorin_disks(disks, filepath="images/all_disks.png")
+    #plot_gershgorin_disks(disks, filepath="images/all_disks.png")
     
     # Disk analysis
     contained_disks, candidate_points = analyze_disks(disks, h1, signH1, cp)
-    scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
-    plot_gershgorin_disks(contained_disks, filled=true, filepath="images/remain_disks.png")
+    scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned1.png")
+    plot_gershgorin_disks(contained_disks, filled=true, filepath="images/remain_disks1.png")
     
-    display(candidate_points)
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
-    result_plot = plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
+    result_plot = plot_intervals(intervals, scanned_plot, filepath="images/intervals1.png")
+
+    bounds = all_eigenvalue_bounds(inputMatrix)
+    draw_intervals(result_plot, bounds, filepath="images/bounds1.png")
+
+
+    for interval in intervals
+        if interval.isExist
+            println("Interval [$(interval.startP), $(interval.endP)]: ")
+            for b in bounds 
+                i = interval
+                case1 = b.lower <= i.startP && i.endP <= b.upper 
+                case2 = i.startP < b.upper && b.upper < i.endP
+                case3 = b.lower < i.startP && i.startP < b.upper
+
+                if case1  || case2 || case3
+                    println("\t $(b.lambda)")
+                end
+            end
+        end 
+        
+    end
+end
+
+function draw_intervals(plt, V::Vector{NamedTuple}; filepath="images/bounds1.png")
+    # Get current plot boundaries
+    ymin, ymax = ylims()
+    xmin, xmax = xlims()
+
+    # Calculate offset for bounds (place at bottom of plot)
+    bounds_y = ymin - 0.05 * (ymax - ymin)
+    bounds_height = 0.03 * (ymax - ymin)
+
+    colors = palette(:tab10)
+
+    for (i, b) in enumerate(V)
+        color = colors[(i-1)%length(colors)+1]
+
+        # Draw horizontal line for bound
+        plot!(plt, [b.lower, b.upper], [bounds_y, bounds_y],
+            linewidth=2,
+            color=color,
+            label=b.lambda)
+
+        # Draw vertical markers at boundaries
+        vline!(plt, [b.lower], line=(:dash, 1, color), label="")
+        vline!(plt, [b.upper], line=(:dash, 1, color), label="")
+
+        # Add text label
+        mid = (b.lower + b.upper) / 2
+        annotate!(plt, mid, bounds_y - bounds_height, text(b.lambda, 8, :center, color))
+
+        # Move down for next bound
+        bounds_y -= bounds_height * 2
+    end
+    
+    # Reset y-axis limits to include bounds
+    new_ymin = bounds_y - bounds_height
+    ylims!(new_ymin, ymax)
+
+    if filepath !== nothing
+        savefig(plt, filepath)
+        println("Bounds plot saved to $filepath")
+    end
+
+    return plt
 end
 
 # Run application
