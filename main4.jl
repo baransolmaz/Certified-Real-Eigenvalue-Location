@@ -391,7 +391,7 @@ function main()
        0 0 4 2 -2
     ])
 
-    inputMatrix = B
+    inputMatrix = M
     # Characteristic polynomial and power sums
     pa = charpoly_faddeev_leverrier(inputMatrix)
     display(pa)
@@ -423,6 +423,11 @@ function main()
 
     bounds = all_eigenvalue_bounds(inputMatrix)
     draw_intervals(result_plot, bounds, filepath="images/bounds1.png")
+    draw_intervals(plot(aspect_ratio=1, title="Trace-Based Bounds", xlabel="Re", ylabel="Im", legend=false), bounds, filepath="images/bounds11.png")
+
+    for b in bounds 
+        println("$(b.lambda)    $(b.lower)  $(b.upper)")
+    end
 
 
     for interval in intervals
@@ -432,9 +437,10 @@ function main()
                 i = interval
                 case1 = b.lower <= i.startP && i.endP <= b.upper 
                 case2 = i.startP < b.upper && b.upper < i.endP
-                case3 = b.lower < i.startP && i.startP < b.upper
+                case3 = b.lower > i.startP && i.endP > b.lower
+                case4 = b.lower >= i.startP && i.endP >= b.upper
 
-                if case1  || case2 || case3
+                if case1  || case2 || case3 || case4
                     println("\t $(b.lambda)")
                 end
             end
@@ -449,7 +455,7 @@ function draw_intervals(plt, V::Vector{NamedTuple}; filepath="images/bounds1.png
     xmin, xmax = xlims()
 
     # Calculate offset for bounds (place at bottom of plot)
-    bounds_y = ymin - 0.05 * (ymax - ymin)
+    bounds_y = ymin + 0.13 * (ymax - ymin)
     bounds_height = 0.03 * (ymax - ymin)
 
     colors = palette(:tab10)

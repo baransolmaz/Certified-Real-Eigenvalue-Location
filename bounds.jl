@@ -159,6 +159,13 @@ function main()
     B = [0.0 -1.0 0.0;
         1.0 0.0 0.0;
         0.0 0.0 1.0]
+    B = Matrix{Rational{Int}}([
+        5//4 1 3//4 1//2 1//4;
+        1 0 0 0 0;
+        -1 1 0 0 0;
+        0 0 1 3 0;
+        0 0 0 1//2 5
+    ])
 
     all_bounds = all_eigenvalue_bounds(B)
     disks = gershgorin_disks(B)
