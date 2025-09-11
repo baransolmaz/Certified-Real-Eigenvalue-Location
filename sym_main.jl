@@ -370,7 +370,7 @@ function main()
     # Disk analysis
     contained_disks, candidate_points = analyze_disks(disks, h1, signH1, cp)
     scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
-    plot_gershgorin_disks(contained_disks, filled=true, filepath="images/remain_disks.png")
+    plot_gershgorin_disks(contained_disks, filled=true, filepath="images/all_disks.png")
     
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
