@@ -1,33 +1,79 @@
 using Plots
 using LinearAlgebra
+import GenericSchur: hessenberg
+
 gr()
 
 # Polynomial utilities --------------------------------------------------------
 """
-    charpoly_faddeev_leverrier(A::Matrix{<:Rational})
+    la_budde_general(A::Matrix{<:BigFloat})
 
-Compute characteristic polynomial coefficients using Faddeev-Leverrier method.
+Compute characteristic polynomial coefficients using La Budde's method.
 Returns monic polynomial coefficients: [1, c_{n-1}, ..., c₀]
 """
-function charpoly_faddeev_leverrier(A::Matrix{<:Rational})
+function la_budde_general(A::Matrix{<:BigFloat})
     n = size(A, 1)
-    T = eltype(A)
-    M = Matrix{T}(I, n, n)  # Identity matrix
-    c = Vector{T}(undef, n) # Coefficients [c_{n-1}, c_{n-2}, ..., c₀]
 
-    for k in 1:n
-        AM = A * M           # Matrix multiplication
-        trace_AM = tr(AM)    # Trace of the product
-        c_k = -trace_AM // k # Compute coefficient
-        c[k] = c_k
+    # Reduce matrix to upper Hessenberg form
+    F = hessenberg(A)
+    H = F.H
 
-        if k < n
-            M = AM + c_k * I  # Update matrix for next iteration
+    # Extract subdiagonal elements
+    β = [0; diag(H, -1)]
+
+    # Initialize coefficient matrix
+    C = zeros(n, n)
+    C[1, 1] = -H[1, 1]
+
+    for i in 2:n
+        # j = 1 case
+        C[i, 1] = C[i-1, 1] - H[i, i]
+
+        # j from 2 to i-1
+        for j in 2:i-1
+            s = 0.0
+            # Sum for m=1 to j-2
+            for m in 1:j-2
+                prod = 1.0
+                for t in 0:m-1
+                    prod *= β[i-t]
+                end
+                s += H[i-m, i] * prod * C[i-m-1, j-m-1]
+            end
+
+            # Term for m = j-1
+            prod = 1.0
+            for t in 0:j-2
+                prod *= β[i-t]
+            end
+            s += H[i-j+1, i] * prod
+
+            C[i, j] = C[i-1, j] - H[i, i] * C[i-1, j-1] - s
         end
+
+        # j = i case
+        s = 0.0
+        for m in 1:i-2
+            prod = 1.0
+            for t in 0:m-1
+                prod *= β[i-t]
+            end
+            s += H[i-m, i] * prod * C[i-m-1, i-m-1]
+        end
+
+        # Term for m = i-1
+        prod = 1.0
+        for t in 0:i-2
+            prod *= β[i-t]
+        end
+        s += H[1, i] * prod
+
+        C[i, i] = -H[i, i] * C[i-1, i-1] - s
     end
 
-    return vcat(one(T), c)  # [1, c_{n-1}, ..., c₀]
+    return [1; C[end, :]]  # Return coefficients including leading 1
 end
+
 
 """
     newton_girard_power_sums(coeffs; max_k::Int=(length(coeffs) * 2) - 1)
@@ -38,11 +84,11 @@ function newton_girard_power_sums(coeffs; max_k::Int=(length(coeffs) * 2) - 1)
     # Check leading coefficient and convert to fractions
     a₀ = coeffs[1]
     a₀ == 0 && error("Leading coefficient must be non-zero.")
-    T = Rational{BigInt}
+    T = BigFloat
     coeffs_frac = T.(coeffs)
 
     n = length(coeffs_frac) - 1
-    sigma = [(-1)^k * coeffs_frac[k+1] // coeffs_frac[1] for k in 1:n]
+    sigma = [(-1)^k * coeffs_frac[k+1] / coeffs_frac[1] for k in 1:n]
     S = Vector{T}(undef, max_k + 1)
     S[1] = T(n)  # S₀ = degree
 
@@ -89,7 +135,7 @@ function companion_matrix(coeffs::Vector{T}) where {T<:Number}
 
     # Normalize to monic form
     normalized_coeffs = coeffs ./ coeffs[1]
-    C = zeros(Rational, n, n)
+    C = zeros(BigFloat, n, n)
 
     # Fill subdiagonal with 1s
     for i in 2:n
@@ -110,9 +156,9 @@ end
 
 Compute the signature of a symmetric matrix using sign variations.
 """
-function signature(M::Matrix{<:Number})
-    coeff = charpoly_faddeev_leverrier(M)
-    
+function signature(M::Matrix{<:BigFloat})
+    coeff = la_budde_general(M)
+    #display(coeff)
     function count_sign_variations(c)
         filtered = filter(!iszero, c)
         isempty(filtered) && return 0
@@ -271,7 +317,6 @@ function plot_intervals(intervals, plt; title="Eigenvalue Intervals", filepath=n
 end
 
 
-# Main analysis functions ----------------------------------------------------
 """
     analyze_disks(disks, h1, signH1, cp)
 
@@ -292,8 +337,7 @@ function analyze_disks(disks, h1, signH1, cp)
             g(x) = (x - d.center * I)^2 - (d.radius * I)^2
             hg = h1 * g(cp)
             signHg = signature(hg)
-
-            push!(candidate_points, d.center)
+            push!(candidate_points, d.center) # TODO
             push!(candidate_points, d.center - d.radius)
             push!(candidate_points, d.center + d.radius)
             if signH1 != signHg
@@ -340,17 +384,17 @@ end
 # Main application -----------------------------------------------------------
 function main()
     # Define input matrix
-    M = Matrix{Rational{BigInt}}([
-        5//4  1     3//4  1//2  1//4;
+    M = Matrix((BigFloat)[
+        1.25  1     0.75  0.5  0.25;
         1     0     0     0     0;
         -1    1     0     0     0;
         0     0     1     3     0;
-        0     0     0     1//2  5
+        0     0     0     0.5  5
     ])
 
     inputMatrix = M
     # Characteristic polynomial and power sums
-    pa = charpoly_faddeev_leverrier(inputMatrix)
+    pa = la_budde_general(inputMatrix)
     #display(pa)
     power_sums = newton_girard_power_sums(pa)
     
@@ -366,7 +410,8 @@ function main()
     #display(cp)
     
     # Gershgorin analysis
-    disks = gershgorin_disks(inputMatrix)    
+    disks = gershgorin_disks(inputMatrix)
+    
     # Disk analysis
     contained_disks, candidate_points = analyze_disks(disks, h1, signH1, cp)
     scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
@@ -374,11 +419,16 @@ function main()
     
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
-    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000000000000001)
+    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000001)
     plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
 end
 
+"""
+    benchmark_intervals(points, h1, signH1, cp; tol=1e-6)
+
+Apply binary interval refinement on each [points[i], points[i+1]].
+"""
 function benchmark_intervals(points, h1, signH1, cp, tol)
     sort!(points)
     all_intervals = []
@@ -392,6 +442,13 @@ function benchmark_intervals(points, h1, signH1, cp, tol)
     return all_intervals
 end
 
+"""
+    benchmark_interval(a, b, h1, signH1, cp; tol=1e-6)
+
+Divide & conquer search:
+- If interval [a,b] may contain eigenvalue, split until width ≤ tol.
+- Return only the smallest intervals with isExist=true.
+"""
 function benchmark_interval(a, b, h1, signH1, cp, tol)
     # If interval is smaller than tolerance → final check
     #print("a:\t$a\nb:\t$b\t")
@@ -406,7 +463,7 @@ function benchmark_interval(a, b, h1, signH1, cp, tol)
     #println(contains_eigen)
     if contains_eigen
         # Divide & conquer: split into halves
-        mid = (a + b) // 2
+        mid = (a + b) / 2
         left = benchmark_interval(a, mid, h1, signH1, cp, tol)
         right = benchmark_interval(mid, b, h1, signH1, cp, tol)
         return vcat(left, right)
@@ -422,7 +479,6 @@ function benchmark_check_interval(a, b, h1, signH1, cp)
     signHg = signature(hg)
     return (signH1 != signHg)
 end
-
 
 # Run application
 t1 = time()
