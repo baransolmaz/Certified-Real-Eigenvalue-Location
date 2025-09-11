@@ -292,7 +292,8 @@ function analyze_disks(disks, h1, signH1, cp)
             g(x) = (x - d.center * I)^2 - (d.radius * I)^2
             hg = h1 * g(cp)
             signHg = signature(hg)
-            
+
+            push!(candidate_points, d.center)
             push!(candidate_points, d.center - d.radius)
             push!(candidate_points, d.center + d.radius)
             if signH1 != signHg
@@ -336,43 +337,6 @@ function analyze_intervals(points, h1, signH1, cp)
     return intervals
 end
 
-function compute_s(A::AbstractMatrix)
-    n, m = size(A)
-    return sqrt(((tr(A * A) - ((tr(A)^2)) / n) / n))
-end
-
-function mean_m(A::AbstractMatrix)
-    n, m = size(A)
-    return tr(A) / n
-end
-
-function all_eigenvalue_bounds(A::AbstractMatrix)
-    n = size(A, 1)
-    m = mean_m(A)
-    s = compute_s(A)
-    bounds = Vector{NamedTuple}(undef, n)
-
-    for k in 1:n
-        if k == 1
-            #1.10 2.3
-            # Bounds for largest eigenvalue (λ₁)
-            lower = m + s / sqrt(n - 1) # min_bound
-            upper = m + s * sqrt(n - 1) # max_bound
-        elseif k == n #2.2
-            # Bounds for smallest eigenvalue (λₙ)
-            lower = m - s * sqrt(n - 1)
-            upper = m - s / sqrt(n - 1)
-        else
-            # Bounds for intermediate eigenvalues (Theorem 2.2)
-            lower = m - s * sqrt((k - 1) / (n - k + 1))
-            upper = m + s * sqrt((n - k) / k)
-        end
-        bounds[k] = (lambda="lambda_$k", lower=lower, upper=upper)
-    end
-
-    return bounds
-end
-
 # Main application -----------------------------------------------------------
 function main()
     # Define input matrix
@@ -411,7 +375,7 @@ function main()
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
     benchmark_intervals(candidate_points, h1, signH1, cp, 0.00000001)
-    result_plot = plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
+    plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
 end
 
