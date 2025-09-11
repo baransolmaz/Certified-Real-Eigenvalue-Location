@@ -376,7 +376,7 @@ end
 # Main application -----------------------------------------------------------
 function main()
     # Define input matrix
-    M = Matrix{Rational{Int}}([
+    M = Matrix{Rational{BigInt}}([
         5//4  1     3//4  1//2  1//4;
         1     0     0     0     0;
         -1    1     0     0     0;
@@ -402,9 +402,7 @@ function main()
     #display(cp)
     
     # Gershgorin analysis
-    disks = gershgorin_disks(inputMatrix)
-    #plot_gershgorin_disks(disks, filepath="images/all_disks.png")
-    
+    disks = gershgorin_disks(inputMatrix)    
     # Disk analysis
     contained_disks, candidate_points = analyze_disks(disks, h1, signH1, cp)
     scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
@@ -412,34 +410,57 @@ function main()
     
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
+    benchmark_intervals(candidate_points, h1, signH1, cp, 0.00000001)
     result_plot = plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
-    bounds = all_eigenvalue_bounds(inputMatrix)
-    draw_intervals(result_plot, bounds, filepath="images/intervals_with_bounds.png")
-    draw_only_intervals(bounds, filepath="images/bounds.png")
+end
 
-    for b in bounds 
-        println("$(b.lambda)    $(b.lower)  $(b.upper)")
+function benchmark_intervals(points, h1, signH1, cp, tol)
+    sort!(points)
+    all_intervals = []
+
+    for i in 1:(length(points)-1)
+        a, b = points[i], points[i+1]
+        refined = benchmark_interval(a, b, h1, signH1, cp, tol)
+        append!(all_intervals, refined)
+    end
+    display(all_intervals)
+    return all_intervals
+end
+
+function benchmark_interval(a, b, h1, signH1, cp, tol)
+    # If interval is smaller than tolerance → final check
+    print("a:\t$a\nb:\t$b\t")
+    if abs(b - a) < tol
+        contains_eigen = benchmark_check_interval(a, b, h1, signH1, cp)
+        println(contains_eigen)
+        return contains_eigen ? [(startP=a, endP=b, isExist=true)] : []
     end
 
-
-    for interval in intervals
-        if interval.isExist
-            println("Interval [$(interval.startP), $(interval.endP)]: ")
-            for b in bounds 
-                i = interval
-                case1 = b.lower <= i.startP && i.endP <= b.upper 
-                case2 = i.startP < b.upper && b.upper < i.endP
-                case3 = b.lower > i.startP && i.endP > b.lower
-                case4 = b.lower >= i.startP && i.endP >= b.upper
-
-                if case1  || case2 || case3 || case4
-                    println("\t $(b.lambda)")
-                end
-            end
-        end 
-        
+    # Check if this interval may contain eigenvalue
+    contains_eigen = benchmark_check_interval(a, b, h1, signH1, cp)
+    println(contains_eigen)
+    if contains_eigen
+        # Divide & conquer: split into halves
+        mid = (a + b) // 2
+        left = benchmark_interval(a, mid, h1, signH1, cp, tol)
+        right = benchmark_interval(mid, b, h1, signH1, cp, tol)
+        return vcat(left, right)
+    else
+        # If no eigenvalue, discard
+        return []
     end
+end
+
+function benchmark_check_interval(a, b, h1, signH1, cp)
+    g(x) = (x - a * I) * (x - b * I)
+    hg = h1 * g(cp)
+    #display(g(cp))
+    #display(hg)
+    signHg = signature(hg)
+    #display(signHg)
+    #display(signH1)
+    return (signH1 != signHg)
 end
 
 function draw_intervals(plt, V::Vector{NamedTuple}; filepath="images/bounds.png")
@@ -511,4 +532,7 @@ function draw_only_intervals(V::Vector{NamedTuple}; filepath="images/bounds.png"
 end
 
 # Run application
+t1 = time()
 main()
+elapsed_time = time() - t1;
+println("Elapsed time: ", elapsed_time, " seconds");
