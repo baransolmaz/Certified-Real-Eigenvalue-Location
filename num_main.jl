@@ -376,6 +376,7 @@ function analyze_intervals(points, h1, signH1, cp)
         push!(intervals, (startP=a, endP=b, isExist=contains_eigen))
         
         println("Interval [$a, $b]: $(contains_eigen ? "Contains" : "No") real eigenvalue")
+        #display(signHg)
     end
     
     return intervals
@@ -384,7 +385,7 @@ end
 # Main application -----------------------------------------------------------
 function main()
     # Define input matrix
-    M = Matrix((BigFloat)[
+    A = Matrix((BigFloat)[
         1.25  1     0.75  0.5  0.25;
         1     0     0     0     0;
         -1    1     0     0     0;
@@ -392,35 +393,55 @@ function main()
         0     0     0     0.5  5
     ])
 
-    inputMatrix = M
+    M = Matrix((BigFloat)[
+        1.         0.5        0.33333333 0.25       0.2       ;
+        0.5        0.33333333 0.25       0.2        0.16666667;
+        0.33333333 0.25       0.2        0.16666667 0.14285714;
+        0.25       0.2        0.16666667 0.14285714 0.125     ;
+        0.2        0.16666667 0.14285714 0.125      0.11111111
+    ])
+
+    M1 = Matrix((BigFloat)[
+        1 2 3 4 5 6 7 8;
+        2 1 2 3 4 5 6 7;
+        3 2 1 2 3 4 5 6;
+        4 3 2 1 2 3 4 5;
+        5 4 3 2 1 2 3 4;
+        6 5 4 3 2 1 2 3;
+        7 6 5 4 3 2 1 2;
+        8 7 6 5 4 3 2 1
+
+    ])
+
+    inputMatrix = M1
     # Characteristic polynomial and power sums
+    display(eigvals(inputMatrix))
     pa = la_budde_general(inputMatrix)
-    #display(pa)
+    display(pa)
     power_sums = newton_girard_power_sums(pa)
-    
+    #display(power_sums)
     # Hermite matrix and signature
     n = length(pa) - 1
     h1 = setHermite_1(n, power_sums)
     #display(h1)
     signH1 = signature(h1)
-    #println("Signature H1: $signH1")
-    
+    println("Signature H1: $signH1")
     # Companion matrix for polynomial
     cp = companion_matrix(pa)
     #display(cp)
-    
+
     # Gershgorin analysis
     disks = gershgorin_disks(inputMatrix)
     
     # Disk analysis
     contained_disks, candidate_points = analyze_disks(disks, h1, signH1, cp)
-    scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
-    plot_gershgorin_disks(contained_disks, filled=true, filepath="images/all_disks.png")
-    
+    #scanned_plot = plot_scanned_disks(contained_disks, filepath="images/scanned.png")
+    #plot_gershgorin_disks(contained_disks, filled=true, filepath="images/all_disks.png")
+
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
     benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000001)
-    plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
+    #plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
 end
 

@@ -1,5 +1,6 @@
 using Plots
 using LinearAlgebra
+using GenericLinearAlgebra
 gr()
 
 # Polynomial utilities --------------------------------------------------------
@@ -309,6 +310,7 @@ function analyze_disks(disks, h1, signH1, cp)
     # Sort and deduplicate points
     unique!(candidate_points)
     sort!(candidate_points)
+    #display(candidate_points)
     return contained_disks, candidate_points
 end
 
@@ -332,6 +334,7 @@ function analyze_intervals(points, h1, signH1, cp)
         push!(intervals, (startP=a, endP=b, isExist=contains_eigen))
         
         println("Interval [$a, $b]: $(contains_eigen ? "Contains" : "No") real eigenvalue")
+        #display(signHg)
     end
     
     return intervals
@@ -340,30 +343,64 @@ end
 # Main application -----------------------------------------------------------
 function main()
     # Define input matrix
-    M = Matrix{Rational{BigInt}}([
+    A = Matrix([
         5//4  1     3//4  1//2  1//4;
         1     0     0     0     0;
         -1    1     0     0     0;
         0     0     1     3     0;
         0     0     0     1//2  5
     ])
+    M1 = Matrix{Rational{BigInt}}([
+        1 2 3 4 5 6 7 8;
+        2 1 2 3 4 5 6 7;
+        3 2 1 2 3 4 5 6;
+        4 3 2 1 2 3 4 5;
+        5 4 3 2 1 2 3 4;
+        6 5 4 3 2 1 2 3;
+        7 6 5 4 3 2 1 2;
+        8 7 6 5 4 3 2 1
+    ])
+    
+    M2 = Matrix{Rational{BigInt}}([
+        1 1//2 1//3 1//4 1//5;
+        1//2 1//3 1//4 1//5 1//6;
+        1//3 1//4 1//5 1//6 1//7;
+        1//4 1//5 1//6 1//6 1//8;
+        1//5 1//6 1//7 1//7 1//9;
+    ])
+    BOTH = Matrix([
+        3+4im 1 1 1 1 1;
+        0 6 1 1 1 1;
+        0 0 3-4im 1 1 1;
+        0 0 0 3-4im 1 1;
+        0 0 0 0 6 1;
+        0 0 0 0 0 3+4im
+    ])
 
-    inputMatrix = M
+    NORMAL = Matrix([
+        6+0im 6-12im 4-2im;
+        6+12im 37+0im 11+7im;
+        4+2im 11-7im 5+0im
+    ])
+
+    inputMatrix = M1
+    display(eigvals(inputMatrix))
+    
     # Characteristic polynomial and power sums
     pa = charpoly_faddeev_leverrier(inputMatrix)
-    #display(pa)
+    display(pa)
     power_sums = newton_girard_power_sums(pa)
     
     # Hermite matrix and signature
     n = length(pa) - 1
     h1 = setHermite_1(n, power_sums)
-    #display(h1)
+    display(h1)
     signH1 = signature(h1)
-    #println("Signature H1: $signH1")
+    println("Signature H1: $signH1")
     
     # Companion matrix for polynomial
     cp = companion_matrix(pa)
-    #display(cp)
+    display(cp)
     
     # Gershgorin analysis
     disks = gershgorin_disks(inputMatrix)    
@@ -374,7 +411,7 @@ function main()
     
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
-    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000000000000001)
+    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000001)
     plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
 end
