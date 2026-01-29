@@ -1,6 +1,7 @@
 import Pkg
 Pkg.add("Plots")
 Pkg.add("LinearAlgebra")
+Pkg.add("GenericLinearAlgebra")
 Pkg.add("Printf")
 Pkg.add("AbstractAlgebra")
 Pkg.add("Polynomials")
