@@ -411,7 +411,7 @@ function main()
     
     # Interval analysis
     intervals = analyze_intervals(candidate_points, h1, signH1, cp)
-    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000001)
+    benchmark_intervals(candidate_points, h1, signH1, cp, 0.0000001) #0.0000000000000001
     plot_intervals(intervals, scanned_plot, filepath="images/intervals.png")
 
 end
